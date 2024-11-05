@@ -18,17 +18,14 @@ app.get('/', (req, res) => {
   res.send('Weather Search API is running');
 });
 
-// 启动服务器
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
 // 连接 MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
+mongoose.connect(process.env.MONGO_URI).then(() => {
   console.log('MongoDB connected successfully');
+  
+  // 启动服务器
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
 }).catch(err => {
   console.error('MongoDB connection error:', err);
 });
