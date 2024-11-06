@@ -13,6 +13,19 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// 硬编码的模拟数据
+const mockAddressData = {
+  street: "123 Main St",
+  city: "Los Angeles",
+  state: "CA"
+};
+
+const mockCurrentLocationData = {
+  useCurrentLocation: true,
+  latitude: 34.0030,
+  longitude: -118.2863
+};
+
 // 基本路由
 app.get('/', (req, res) => {
   res.send('Weather Search API is running');
