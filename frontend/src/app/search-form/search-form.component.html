@@ -1,74 +1,67 @@
-<div class="search-form container">
-    <form (ngSubmit)="onSearch()" #searchForm="ngForm">
-      <div class="form-group">
-        <label for="street">Street Address</label>
+<!-- search-form.component.html -->
+<div class="search-form container mt-4">
+    <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+      <!-- Street Address -->
+      <div class="form-group mb-3">
+        <label for="street" class="form-label">Street Address</label>
         <input 
           type="text" 
           id="street" 
           class="form-control" 
-          name="street" 
-          [(ngModel)]="street" 
+          formControlName="street" 
           placeholder="Enter street address"
-          [disabled]="useCurrentLocation"
-          required 
+          [disabled]="searchForm.get('useCurrentLocation')?.value"
         />
       </div>
   
-      <div class="form-group">
-        <label for="city">City</label>
+      <!-- City with autocomplete -->
+      <div class="form-group mb-3">
+        <label for="city" class="form-label">City</label>
         <input 
           type="text" 
           id="city" 
           class="form-control" 
-          name="city" 
-          [(ngModel)]="city" 
+          formControlName="city" 
           placeholder="Enter city"
-          [disabled]="useCurrentLocation"
-          required 
+          [matAutocomplete]="auto"
+          [disabled]="searchForm.get('useCurrentLocation')?.value"
         />
+        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onCitySelected($event.option.value)">
+          <mat-option *ngFor="let option of cityOptions" [value]="option">
+            {{ option.city }}
+          </mat-option>
+        </mat-autocomplete>
       </div>
   
-      <div class="form-group">
-        <label for="state">State</label>
+      <!-- State Dropdown -->
+      <div class="form-group mb-3">
+        <label for="state" class="form-label">State</label>
         <select 
           id="state" 
-          class="form-control" 
-          name="state" 
-          [(ngModel)]="state" 
-          [disabled]="useCurrentLocation"
-          required
+          class="form-select" 
+          formControlName="state" 
+          [disabled]="searchForm.get('useCurrentLocation')?.value"
         >
-          <option value="" disabled selected>Select state</option>
+          <option value="" disabled>Select state</option>
           <option *ngFor="let state of states" [value]="state">{{ state }}</option>
         </select>
       </div>
   
-      <div class="form-check">
+      <!-- Current Location Checkbox -->
+      <div class="form-check mb-3">
         <input 
           type="checkbox" 
           id="useCurrentLocation" 
           class="form-check-input" 
-          [(ngModel)]="useCurrentLocation" 
-          name="useCurrentLocation" 
+          formControlName="useCurrentLocation"
         />
         <label for="useCurrentLocation" class="form-check-label">Use Current Location</label>
       </div>
   
-      <div class="form-group">
-        <button 
-          type="submit" 
-          class="btn btn-primary" 
-          [disabled]="!searchForm.form.valid"
-        >
-          Search
-        </button>
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          (click)="onClear()"
-        >
-          Clear
-        </button>
+      <!-- Buttons -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" [disabled]="!searchForm.valid">Search</button>
+        <button type="button" class="btn btn-secondary" (click)="onClear()">Clear</button>
       </div>
     </form>
   </div>
