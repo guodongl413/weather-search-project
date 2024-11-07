@@ -1,0 +1,15 @@
+# 忽略后端的环境变量文件
+/backend/.env
+
+# Node modules
+node_modules/
+
+# 前端的构建输出
+/frontend/build/
+
+# 日志文件
+*.log
+
+# OS 生成的文件
+.DS_Store
+Thumbs.db
