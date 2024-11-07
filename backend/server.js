@@ -11,6 +11,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 从环境变量中获取 Google API 密钥，并定义为常量
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+
 // 中间件
 app.use(cors());
 app.use(express.json());
@@ -35,7 +38,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/autocomplete', async (req, res) => {
   const { input } = req.query;
-  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&types=(cities)&key=AIzaSyCXW5z1VlxxIPn3yuNBWN3jF2PqokEE5O8`;
+  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&types=(cities)&key=${GOOGLE_API_KEY}`;
   try {
     const response = await axios.get(url);
     res.json(response.data);
