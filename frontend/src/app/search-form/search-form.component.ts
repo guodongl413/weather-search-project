@@ -1,18 +1,17 @@
 // search-form.component.ts
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { debounceTime, switchMap, catchError, map } from 'rxjs/operators';
+import { debounceTime, switchMap, catchError, map, tap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatOptionModule } from '@angular/material/core';
-import { FormsModule } from '@angular/forms';  // 保留导入，如果不再使用 [(ngModel)] 可以移除
-import { MatCheckboxModule } from '@angular/material/checkbox'; // 添加 MatCheckboxModule
-import { MatSelectModule } from '@angular/material/select'; // 添加 MatSelectModule
-import { MatButtonModule } from '@angular/material/button'; // 添加 MatButtonModule
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-search-form',
@@ -20,30 +19,37 @@ import { MatButtonModule } from '@angular/material/button'; // 添加 MatButtonM
   templateUrl: './search-form.component.html',
   styleUrls: ['./search-form.component.css'],
   imports: [
+    CommonModule,
     ReactiveFormsModule,
-    // FormsModule,  // 如果不再使用 [(ngModel)]，可以移除
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
     MatOptionModule,
     MatCheckboxModule,
     MatSelectModule,
-    MatButtonModule,
-    CommonModule
+    MatButtonModule
   ]
 })
 export class SearchFormComponent implements OnInit {
   searchForm: FormGroup;
   cityOptions: { city: string; state: string }[] = [];
-
   states: string[] = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
     'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA',
     'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
-  private readonly API_KEY = 'AIzaSyCXW5z1VlxxIPn3yuNBWN3jF2PqokEE5O8';
-  private readonly API_URL = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+  // 后端 API 基础 URL
+  private readonly API_BASE_URL = 'http://localhost:3000/api';
+
+  // Flags for loading and error handling
+  isLoading: boolean = false;
+  autocompleteError: boolean = false;
+  locationError: boolean = false;
+
+  // 用户位置信息
+  userLatitude: number | null = null;
+  userLongitude: number | null = null;
 
   constructor(private fb: FormBuilder, private http: HttpClient) {
     this.searchForm = this.fb.group({
@@ -72,6 +78,87 @@ export class SearchFormComponent implements OnInit {
       });
   }
 
+  /**
+   * 自定义验证器，检查输入是否仅包含空格
+   */
+  noWhitespaceValidator(control: AbstractControl) {
+    const isWhitespace = (control.value || '').trim().length === 0;
+    const isValid = !isWhitespace;
+    return isValid ? null : { 'whitespace': true };
+  }
+
+  /**
+   * 检查表单字段是否无效且已被触碰
+   */
+  isFieldInvalid(field: string): boolean {
+    const control = this.searchForm.get(field);
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  /**
+   * 确定是否启用搜索按钮
+   */
+  isSearchButtonEnabled(): boolean {
+    if (this.searchForm.get('useCurrentLocation')?.value) {
+      return this.userLatitude !== null && this.userLongitude !== null && !this.locationError;
+    } else {
+      return this.searchForm.valid;
+    }
+  }
+
+  /**
+   * 处理 'Use Current Location' 复选框的切换
+   */
+  onLocationToggle(checked: boolean) {
+    if (checked) {
+      // 禁用表单字段但保留其值
+      this.searchForm.get('street')?.disable();
+      this.searchForm.get('city')?.disable();
+      this.searchForm.get('state')?.disable();
+
+      // 获取用户当前位置
+      this.getUserLocation();
+    } else {
+      // 启用表单字段
+      this.searchForm.get('street')?.enable();
+      this.searchForm.get('city')?.enable();
+      this.searchForm.get('state')?.enable();
+
+      // 重置位置信息
+      this.userLatitude = null;
+      this.userLongitude = null;
+      this.locationError = false;
+    }
+  }
+
+  /**
+   * 使用 ipinfo API 获取用户当前的经纬度
+   */
+  getUserLocation() {
+    this.isLoading = true;
+    this.locationError = false;
+
+    this.http.get<any>('http://ip-api.com/json').pipe(
+      catchError((error) => {
+        console.error('Error fetching user location:', error);
+        this.locationError = true;
+        this.isLoading = false;
+        return of(null);
+      })
+    ).subscribe((data) => {
+      this.isLoading = false;
+      if (data && data.status === 'success') {
+        this.userLatitude = data.lat;
+        this.userLongitude = data.lon;
+      } else {
+        this.locationError = true;
+      }
+    });
+  }
+
+  /**
+   * 获取城市自动完成建议
+   */
   getCityAutocomplete(input: string): Observable<{ city: string; state: string }[]> {
     if (!input) return of([]);
     const url = `/api/autocomplete?input=${input}`;
@@ -85,36 +172,101 @@ export class SearchFormComponent implements OnInit {
           return { city, state };
         });
       }),
-      catchError(() => of([]))
+      catchError(() => {
+        this.autocompleteError = true;
+        return of([]);
+      })
     );
   }
 
-  onLocationToggle(checked: boolean = false) {
-    if (checked) {
-      this.searchForm.get('street')?.disable();
-      this.searchForm.get('city')?.disable();
-      this.searchForm.get('state')?.disable();
-    } else {
-      this.searchForm.get('street')?.enable();
-      this.searchForm.get('city')?.enable();
-      this.searchForm.get('state')?.enable();
-    }
-  }
-
+  /**
+   * 处理从自动完成选中的城市
+   */
   onCitySelected(option: { city: string; state: string }) {
     this.searchForm.get('city')?.setValue(option.city);
     this.searchForm.get('state')?.setValue(option.state);
   }
 
+  /**
+   * 处理表单提交
+   */
   onSearch() {
-    if (this.searchForm.valid) {
-      console.log('Search Form Data:', this.searchForm.value);
-      // 在这里添加您的搜索逻辑
+    if (!this.isSearchButtonEnabled()) {
+      // 标记所有字段为已触碰以触发验证消息
+      this.searchForm.markAllAsTouched();
+      return;
+    }
+
+    const formData = this.searchForm.getRawValue(); // 获取禁用字段的值
+
+    this.isLoading = true;
+
+    if (formData.useCurrentLocation) {
+      // 使用当前位置信息发送请求
+      const payload = {
+        useCurrentLocation: true,
+        latitude: this.userLatitude,
+        longitude: this.userLongitude
+      };
+      this.sendSearchRequest(payload);
+    } else {
+      // 使用用户输入的地址发送请求
+      const payload = {
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        useCurrentLocation: false
+      };
+      this.sendSearchRequest(payload);
     }
   }
 
+  /**
+   * 发送搜索请求到后端
+   */
+  sendSearchRequest(payload: any) {
+    this.http.post<any>(`${this.API_BASE_URL}/search`, payload).pipe(
+      catchError((error) => {
+        console.error('Search request failed:', error);
+        this.isLoading = false;
+        // 可选：显示错误消息给用户
+        return of(null);
+      })
+    ).subscribe((response) => {
+      this.isLoading = false;
+      if (response) {
+        console.log('Search response:', response);
+        // 在这里处理搜索结果，例如通过服务传递给其他组件
+        // Example: this.weatherService.setWeatherData(response);
+      } else {
+        // 处理无响应的情况
+        console.error('No response received from search API.');
+      }
+    });
+  }
+
+  /**
+   * 处理表单清除
+   */
   onClear() {
-    this.searchForm.reset();
-    this.onLocationToggle(false);
+    this.searchForm.reset({
+      street: '',
+      city: '',
+      state: '',
+      useCurrentLocation: false
+    });
+
+    // 启用表单字段
+    this.searchForm.get('street')?.enable();
+    this.searchForm.get('city')?.enable();
+    this.searchForm.get('state')?.enable();
+
+    // 重置位置信息
+    this.userLatitude = null;
+    this.userLongitude = null;
+    this.locationError = false;
+
+    // 重置错误标志
+    this.autocompleteError = false;
   }
 }
