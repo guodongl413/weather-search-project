@@ -137,6 +137,7 @@ export class SearchFormComponent implements OnInit {
   /**
    * 使用 ipinfo API 获取用户当前的经纬度
    */
+  
   getUserLocation() {
     this.isLoading = true;
     this.locationError = false;
@@ -151,14 +152,16 @@ export class SearchFormComponent implements OnInit {
       })
     ).subscribe((data) => {
       this.isLoading = false;
-      if (data && data.status === 'success') {
-        this.userLatitude = data.lat;
-        this.userLongitude = data.lon;
+      if (data && data.loc) {
+        const [latitude, longitude] = data.loc.split(',').map((coord: string) => parseFloat(coord));
+        this.userLatitude = latitude;
+        this.userLongitude = longitude;
       } else {
         this.locationError = true;
       }
     });
   }
+
 
   /**
    * 获取城市自动完成建议
