@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -53,6 +52,29 @@ app.get('/api/autocomplete', async (req, res) => {
   }
 });
 
+// Fetch weather data helper function
+async function fetchWeatherData(latitude, longitude, timesteps, fields) {
+  const url = "https://api.tomorrow.io/v4/timelines";
+  const params = {
+    location: `${latitude},${longitude}`,
+    fields: fields,
+    units: "imperial",
+    timesteps: timesteps,
+    timezone: "America/Los_Angeles"
+  };
+  const headers = { "apikey": TOMORROW_API_KEY };
+
+  try {
+    const response = await axios.get(url, { headers, params });
+    console.log(`Request URL: ${response.config.url}`);
+    console.log(`Status Code: ${response.status}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ${timesteps} weather data:`, error.message);
+    return null;
+  }
+}
+
 // Search 路由
 app.post('/api/search', async (req, res) => {
   const { street, city, state, useCurrentLocation, latitude, longitude } = req.body;
@@ -70,7 +92,6 @@ app.post('/api/search', async (req, res) => {
       return res.status(400).json({ error: 'Street, City, and State are required unless using current location.' });
     }
 
-    // 使用 Google Geocoding API 将地址转换为经纬度
     const address = `${street}, ${city}, ${state}`;
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`;
 
@@ -87,28 +108,24 @@ app.post('/api/search', async (req, res) => {
     }
   }
 
-  // 调用 tomorrow.io API 获取天气信息
-  const weatherUrl = `https://api.tomorrow.io/v4/timelines`;
-  const params = {
-    location: `${lat},${lon}`,
-    fields: [
-            "temperature", "temperatureApparent", "temperatureMin", "temperatureMax",
-            "windSpeed", "humidity", "uvIndex", "pressureSeaLevel", "sunriseTime",
-            "sunsetTime", "cloudCover", "precipitationProbability", "precipitationType",
-            "weatherCode", "visibility", "moonPhase"
-    ],
-    units: 'imperial', // 根据需要选择 'metric' 或 'imperial'
-    timesteps: ['1d'],
-    apikey: TOMORROW_API_KEY
-  };
+  // 定义需要的字段
+  const dailyFields = [
+    "temperature", "temperatureApparent", "temperatureMin", "temperatureMax"
+  ];
+  const hourlyFields = [
+    "temperature", "windSpeed", "windDirection", "humidity", "pressureSeaLevel"
+  ];
 
-  try {
-    const weatherResponse = await axios.get(weatherUrl, { params });
-    res.json(weatherResponse.data);
-  } catch (error) {
-    console.error('Weather API error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch weather data.' });
+  // 获取 daily 数据
+  const dailyData = await fetchWeatherData(lat, lon, "1d", dailyFields.join(","));
+  // 获取 hourly 数据
+  const hourlyData = await fetchWeatherData(lat, lon, "1h", hourlyFields.join(","));
+
+  if (!dailyData || !hourlyData) {
+    return res.status(500).json({ error: 'Failed to retrieve weather data.' });
   }
+
+  res.json({ daily: dailyData, hourly: hourlyData });
 });
 
 // 连接 MongoDB

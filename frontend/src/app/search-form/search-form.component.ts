@@ -1,4 +1,3 @@
-// search-form.component.ts
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -12,6 +11,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { WeatherDisplayComponent } from '../weather-display/weather-display.component'; // 确保路径正确
 
 @Component({
   selector: 'app-search-form',
@@ -27,11 +27,16 @@ import { MatButtonModule } from '@angular/material/button';
     MatOptionModule,
     MatCheckboxModule,
     MatSelectModule,
-    MatButtonModule
+    MatButtonModule,
+    WeatherDisplayComponent
   ]
 })
 export class SearchFormComponent implements OnInit {
   searchForm: FormGroup;
+  isLoading: boolean = false;
+  dailyWeatherData: any; // 用于存储 daily 数据
+  hourlyWeatherData: any; // 用于存储 hourly 数据
+
   cityOptions: { city: string; state: string }[] = [];
   states: string[] = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
@@ -39,11 +44,9 @@ export class SearchFormComponent implements OnInit {
     'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
-  // 后端 API 基础 URL
   private readonly API_BASE_URL = 'http://localhost:3000/api';
 
   // Flags for loading and error handling
-  isLoading: boolean = false;
   autocompleteError: boolean = false;
   locationError: boolean = false;
 
@@ -224,26 +227,48 @@ export class SearchFormComponent implements OnInit {
   /**
    * 发送搜索请求到后端
    */
+  // sendSearchRequest(payload: any) {
+  //   this.http.post<any>(`${this.API_BASE_URL}/search`, payload).pipe(
+  //     catchError((error) => {
+  //       console.error('Search request failed:', error);
+  //       this.isLoading = false;
+  //       return of(null);
+  //     })
+  //   ).subscribe((response) => {
+  //     this.isLoading = false;
+  //     if (response) {
+  //       console.log('Search response:', response);
+  //       // 存储后端返回的数据
+  //       this.dailyWeatherData = response.daily;
+  //       this.hourlyWeatherData = response.hourly;
+  //     } else {
+  //       console.error('No response received from search API.');
+  //     }
+  //   });
+  // }
+
   sendSearchRequest(payload: any) {
     this.http.post<any>(`${this.API_BASE_URL}/search`, payload).pipe(
       catchError((error) => {
         console.error('Search request failed:', error);
         this.isLoading = false;
-        // 可选：显示错误消息给用户
         return of(null);
       })
     ).subscribe((response) => {
       this.isLoading = false;
       if (response) {
         console.log('Search response:', response);
-        // 在这里处理搜索结果，例如通过服务传递给其他组件
-        // Example: this.weatherService.setWeatherData(response);
+        // 确保提取 daily 和 hourly 数据中的 intervals
+        this.dailyWeatherData = response.daily?.data?.timelines[0]?.intervals || [];
+        this.hourlyWeatherData = response.hourly?.data?.timelines[0]?.intervals || [];
+        console.log('Daily Data:', this.dailyWeatherData);
+        console.log('Hourly Data:', this.hourlyWeatherData);
       } else {
-        // 处理无响应的情况
         console.error('No response received from search API.');
       }
     });
   }
+  
 
   /**
    * 处理表单清除

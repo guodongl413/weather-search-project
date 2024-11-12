@@ -103,4 +103,10 @@
       Failed to obtain your current location.
     </div>
   </form>
+
+  <!-- 在接收到数据时展示 WeatherDisplayComponent -->
+  <app-weather-display 
+  *ngIf="dailyWeatherData && dailyWeatherData.length"
+  [dailyData]="dailyWeatherData">
+  </app-weather-display>
 </div>

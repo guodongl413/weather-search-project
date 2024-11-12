@@ -1,0 +1,42 @@
+<div *ngIf="dailyData.length">
+    <h2>Daily Weather</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Temperature Min</th>
+          <th>Temperature Max</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let day of dailyData">
+          <td>{{ day.startTime | date:'yyyy-MM-dd' }}</td>
+          <td>{{ day.values.temperatureMin }} °F</td>
+          <td>{{ day.values.temperatureMax }} °F</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- <div *ngIf="hourlyData.length">
+    <h2>Hourly Weather</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Temperature</th>
+          <th>Wind Speed</th>
+          <th>Humidity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let hour of hourlyData">
+          <td>{{ hour.startTime | date:'shortTime' }}</td>
+          <td>{{ hour.values.temperature }} °F</td>
+          <td>{{ hour.values.windSpeed }} mph</td>
+          <td>{{ hour.values.humidity }} %</td>
+        </tr>
+      </tbody>
+    </table>
+  </div> -->
+  
