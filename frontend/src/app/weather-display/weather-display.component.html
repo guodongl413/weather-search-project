@@ -4,15 +4,19 @@
       <thead>
         <tr>
           <th>Date</th>
-          <th>Temperature Min</th>
-          <th>Temperature Max</th>
+          <th>Status</th>
+          <th>Temp. High(°F)</th>
+          <th>Temp. Low(°F)</th>
+          <th>Wind Speed(mph)</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let day of dailyData">
           <td>{{ day.startTime | date:'yyyy-MM-dd' }}</td>
-          <td>{{ day.values.temperatureMin }} °F</td>
+          <td>{{ day.values.weatherCode }}</td>
           <td>{{ day.values.temperatureMax }} °F</td>
+          <td>{{ day.values.temperatureMin }} °F</td>
+          <td>{{ day.values.windSpeed }} °F</td>
         </tr>
       </tbody>
     </table>

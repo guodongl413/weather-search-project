@@ -110,7 +110,7 @@ app.post('/api/search', async (req, res) => {
 
   // 定义需要的字段
   const dailyFields = [
-    "temperature", "temperatureApparent", "temperatureMin", "temperatureMax"
+    "temperature", "temperatureApparent", "temperatureMin", "temperatureMax", "windSpeed", "weatherCode"
   ];
   const hourlyFields = [
     "temperature", "windSpeed", "windDirection", "humidity", "pressureSeaLevel"
