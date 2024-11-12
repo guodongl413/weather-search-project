@@ -141,7 +141,8 @@ export class SearchFormComponent implements OnInit {
     this.isLoading = true;
     this.locationError = false;
 
-    this.http.get<any>('http://ip-api.com/json').pipe(
+    const ipinfoToken = '29dda6a6f80db3';
+    this.http.get<any>(`https://ipinfo.io/json?token=${ipinfoToken}`).pipe(
       catchError((error) => {
         console.error('Error fetching user location:', error);
         this.locationError = true;
