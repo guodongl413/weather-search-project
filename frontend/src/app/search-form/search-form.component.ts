@@ -44,7 +44,7 @@ export class SearchFormComponent implements OnInit {
     'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
-  private readonly API_BASE_URL = 'http://localhost:3000/api';
+  private readonly API_BASE_URL = 'https://backend-dot-weather-search-project-440903.wl.r.appspot.com/api';
 
   // Flags for loading and error handling
   autocompleteError: boolean = false;
@@ -252,7 +252,9 @@ export class SearchFormComponent implements OnInit {
   // }
 
   sendSearchRequest(payload: any) {
-    this.http.post<any>(`${this.API_BASE_URL}/search`, payload).pipe(
+    // 将 payload 转换为 URL 查询字符串
+    const params = new URLSearchParams(payload).toString();
+    this.http.get<any>(`${this.API_BASE_URL}/search?${params}`).pipe(
       catchError((error) => {
         console.error('Search request failed:', error);
         this.isLoading = false;

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const axios = require('axios');
+const fs = require('fs'); // 新增
 
 const Favorite = require('./models/Favorite');
 
@@ -35,6 +36,16 @@ if (!TOMORROW_API_KEY) {
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 读取本地的JSON文件 (只需读取一次，避免重复读取)
+let localWeatherData;
+try {
+  const data = fs.readFileSync('./Weatherdata.json', 'utf8'); // 确保路径正确
+  localWeatherData = JSON.parse(data);
+  console.log('Local weather data loaded successfully');
+} catch (error) {
+  console.error('Error loading local weather data:', error.message);
+}
 
 // 基本路由
 app.get('/', (req, res) => {
@@ -119,9 +130,11 @@ app.get('/api/search', async (req, res) => {
   ];
 
   // 获取 daily 数据
-  const dailyData = await fetchWeatherData(lat, lon, "1d", dailyFields.join(","));
+  // const dailyData = await fetchWeatherData(lat, lon, "1d", dailyFields.join(","));
+  const dailyData = localWeatherData.daily;
   // 获取 hourly 数据
-  const hourlyData = await fetchWeatherData(lat, lon, "1h", hourlyFields.join(","));
+  // const hourlyData = await fetchWeatherData(lat, lon, "1h", hourlyFields.join(","));
+  const hourlyData = localWeatherData.hourly;
 
   if (!dailyData || !hourlyData) {
     return res.status(500).json({ error: 'Failed to retrieve weather data.' });
@@ -132,10 +145,70 @@ app.get('/api/search', async (req, res) => {
 
 // 连接 MongoDB
 mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+  dbName: 'weatherapp',  // 指定数据库名称
+  // useNewUrlParser: true,
+  // useUnifiedTopology: true
 }).then(() => {
   console.log('MongoDB connected successfully');
+
+// 添加收藏城市
+app.post('/api/favorites', async (req, res) => {
+
+  console.log('Received POST request at /api/favorites');
+  console.log('Request Body:', req.body);
+
+  const { city, state } = req.body;
+
+  // 验证参数
+  if (!city || !state) {
+    return res.status(400).json({ error: 'City and State are required.' });
+  }
+
+  try {
+    // 检查是否已存在
+    const existingFavorite = await Favorite.findOne({ city, state });
+    if (existingFavorite) {
+      return res.status(409).json({ message: 'City is already in favorites.' });
+    }
+
+    // 添加到数据库
+    const newFavorite = new Favorite({ city, state });
+    await newFavorite.save();
+
+    return res.status(201).json({ message: 'City added to favorites.', data: newFavorite });
+  } catch (error) {
+    console.error('Error adding to favorites:', error.message);
+    return res.status(500).json({ error: 'Failed to add city to favorites.' });
+  }
+});
+
+// 删除收藏城市
+app.delete('/api/favorites/:city', async (req, res) => {
+  const { city } = req.params;
+
+  try {
+    const result = await Favorite.deleteOne({ city });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'City not found in favorites.' });
+    }
+
+    return res.status(200).json({ message: 'City removed from favorites.' });
+  } catch (error) {
+    console.error('Error removing city:', error.message);
+    return res.status(500).json({ error: 'Failed to remove city from favorites.' });
+  }
+});
+
+// 获取所有收藏城市
+app.get('/api/favorites', async (req, res) => {
+  try {
+    const favorites = await Favorite.find(); // 从数据库中查询所有收藏的城市
+    return res.status(200).json(favorites);
+  } catch (error) {
+    console.error('Error fetching favorites:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch favorites.' });
+  }
+});
 
   // 启动服务器
   app.listen(PORT, () => {
