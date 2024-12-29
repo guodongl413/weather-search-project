@@ -133,15 +133,21 @@ app.get('/api/search', async (req, res) => {
   // 获取 daily 数据
   const dailyData = await fetchWeatherData(lat, lon, "1d", dailyFields.join(","));
   // const dailyData = localWeatherData.daily;
+
   // 获取 hourly 数据
-  const hourlyData = await fetchWeatherData(lat, lon, "1h", hourlyFields.join(","));
+  // const hourlyData = await fetchWeatherData(lat, lon, "1h", hourlyFields.join(","));
   // const hourlyData = localWeatherData.hourly;
 
-  if (!dailyData || !hourlyData) {
+  // if (!dailyData || !hourlyData) {
+  //   return res.status(500).json({ error: 'Failed to retrieve weather data.' });
+  // }
+
+  if (!dailyData) {
     return res.status(500).json({ error: 'Failed to retrieve weather data.' });
   }
 
-  res.json({ daily: dailyData, hourly: hourlyData });
+  // res.json({ daily: dailyData, hourly: hourlyData });
+  res.json({ daily: dailyData });
 });
 
 // 连接 MongoDB
